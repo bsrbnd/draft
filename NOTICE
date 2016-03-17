@@ -1,5 +1,5 @@
 SymProc annotation-processor
-Copyright 2015 Bernard Blaser
+Copyright 2015-2016 Bernard Blaser
 
 SymProc is an annotation-processor prototype intended to
 experiment with new Java language features and shouldn't

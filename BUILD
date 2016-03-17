@@ -9,3 +9,6 @@ Running the examples:
  cd ../bin
  java examples.Example
 
+Running the tests:
+ cd ../src/tests
+ jtreg -cpa:/REPLACE_WITH_YOUR_SYMPROC_DIRECTORY/bin -r:../../JTreport -w:../../JTwork .
