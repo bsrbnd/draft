@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Bernard Blaser
+ * Copyright 2015-2016 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,5 +31,12 @@ public class FieldSymbol extends Symbol<Field> {
 	@Override
 	public Field reflect() throws ClassNotFoundException, NoSuchFieldException {
 		return Class.forName(CLASS_NAME).getDeclaredField(NAME);
+	}
+
+	@Override
+	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+		Field f = reflect();
+		f.setAccessible(true);
+		return f.get(instance);
 	}
 }

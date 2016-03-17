@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Bernard Blaser
+ * Copyright 2015-2016 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,5 +63,36 @@ public class MethodSymbol extends Symbol<Method> {
 			return short.class;
 		
 		return Class.forName(trim);
+	}
+
+	private Symbol<?>[] expressions = new Symbol<?>[0];
+	public MethodSymbol apply(Symbol<?>... expressions) {
+		MethodSymbol newSymbol = new MethodSymbol(CLASS_NAME, NAME, PARAMS);
+		newSymbol.expressions = expressions; // TODO add constructor + final field
+		return newSymbol;
+	}
+
+	@Override
+	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException,
+			IllegalAccessException, InvocationTargetException {
+		Object[] evaluations = new Object[expressions.length];
+		for (int i=0; i<evaluations.length; i++) {
+			evaluations[i] = expressions[i].evaluate(instance);
+		}
+
+		Method m = reflect();
+		m.setAccessible(true);
+		return m.invoke(instance, evaluations);
+	}
+
+	@Override
+	public String toString() {
+		String name = NAME;
+		String sep = "(";
+		for (int i=0; i<expressions.length; i++) {
+			name += sep + expressions[i];
+			sep = ",";
+		}
+		return expressions.length > 0 ? name + ")" : name;
 	}
 }

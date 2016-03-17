@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Bernard Blaser
+ * Copyright 2015-2016 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,4 +42,7 @@ public abstract class Symbol<T extends AccessibleObject> {
 	public String toString() {return NAME;}
 	
 	public abstract T reflect() throws Exception;
+
+	public abstract Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException,
+			NoSuchMethodException, IllegalAccessException, InvocationTargetException;
 }

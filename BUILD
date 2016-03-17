@@ -8,6 +8,7 @@ Building the examples using the "symproc" processor:
 Running the examples:
  cd ../bin
  java examples.Example
+ java examples.DynamicExpression
 
 Running the tests:
  cd ../src/tests
