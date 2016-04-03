@@ -24,8 +24,11 @@ import java.lang.reflect.*;
  *
  */
 public class MethodSymbol extends Symbol<Method> {
+	protected final String[] PARAMS;
+
 	public MethodSymbol(String class_name, String name, String[] params) {
-		super(class_name, name, params != null ? params : new String[0]);
+		super(class_name, name);
+		PARAMS = params != null ? params : new String[0];
 	}
 	
 	@Override
@@ -37,6 +40,7 @@ public class MethodSymbol extends Symbol<Method> {
 		return Class.forName(CLASS_NAME).getDeclaredMethod(NAME, params);
 	}
 	
+	@Deprecated
 	public Method reflectExplicit(Class<?>... params)
 			throws ClassNotFoundException, NoSuchMethodException {
 		return Class.forName(CLASS_NAME).getDeclaredMethod(NAME, params);
@@ -65,34 +69,51 @@ public class MethodSymbol extends Symbol<Method> {
 		return Class.forName(trim);
 	}
 
-	private Symbol<?>[] expressions = new Symbol<?>[0];
-	public MethodSymbol apply(Symbol<?>... expressions) {
-		MethodSymbol newSymbol = new MethodSymbol(CLASS_NAME, NAME, PARAMS);
-		newSymbol.expressions = expressions; // TODO add constructor + final field
-		return newSymbol;
-	}
-
 	@Override
 	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException,
 			IllegalAccessException, InvocationTargetException {
-		Object[] evaluations = new Object[expressions.length];
-		for (int i=0; i<evaluations.length; i++) {
-			evaluations[i] = expressions[i].evaluate(instance);
-		}
-
 		Method m = reflect();
 		m.setAccessible(true);
-		return m.invoke(instance, evaluations);
+		return m.invoke(instance);
 	}
 
-	@Override
-	public String toString() {
-		String name = NAME;
-		String sep = "(";
-		for (int i=0; i<expressions.length; i++) {
-			name += sep + expressions[i];
-			sep = ",";
+	public AppliedSymbol apply(Symbol<?>... expressions) {
+		// TODO check expressions types with method parameters?
+		return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, expressions);
+	}
+
+	public static class AppliedSymbol extends MethodSymbol {
+		public final Symbol<?>[] EXPRESSIONS;
+
+		private AppliedSymbol(String class_name, String name, String[] params, Symbol<?>... expressions) {
+			super(class_name, name, params);
+			EXPRESSIONS = expressions != null ? expressions : new Symbol<?>[0];
 		}
-		return expressions.length > 0 ? name + ")" : name;
+
+		@Override
+		public Object evaluate(Object instance) throws ClassNotFoundException,
+				NoSuchFieldException, NoSuchMethodException,
+				IllegalAccessException, InvocationTargetException {
+
+			Object[] evaluations = new Object[EXPRESSIONS.length];
+			for (int i=0; i<evaluations.length; i++) {
+				evaluations[i] = EXPRESSIONS[i].evaluate(instance);
+			}
+
+			Method m = reflect();
+			m.setAccessible(true);
+			return m.invoke(instance, evaluations);
+		}
+
+		@Override
+		public String toString() {
+			String name = NAME;
+			String sep = "(";
+			for (int i=0; i<EXPRESSIONS.length; i++) {
+				name += sep + EXPRESSIONS[i];
+				sep = ",";
+			}
+			return EXPRESSIONS.length > 0 ? name + ")" : name;
+		}
 	}
 }

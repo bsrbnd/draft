@@ -26,22 +26,16 @@ import java.lang.reflect.*;
 public abstract class Symbol<T extends AccessibleObject> {
 	protected final String CLASS_NAME;
 	protected final String NAME;
-	protected final String[] PARAMS;
-	
-	protected Symbol(String class_name, String name, String[] params) {
-		CLASS_NAME = class_name;
-		NAME = name;
-		PARAMS = params;
-	}
 	
 	protected Symbol(String class_name, String name) {
-		this(class_name, name, null);
+		CLASS_NAME = class_name;
+		NAME = name;
 	}
 	
 	@Override
 	public String toString() {return NAME;}
 	
-	public abstract T reflect() throws Exception;
+	public abstract T reflect() throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException;
 
 	public abstract Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException,
 			NoSuchMethodException, IllegalAccessException, InvocationTargetException;
