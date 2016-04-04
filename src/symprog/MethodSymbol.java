@@ -72,6 +72,8 @@ public class MethodSymbol extends Symbol<Method> {
 	@Override
 	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException,
 			IllegalAccessException, InvocationTargetException {
+		if (quoted) {return this;}
+
 		Method m = reflect();
 		m.setAccessible(true);
 		return m.invoke(instance);
@@ -94,6 +96,8 @@ public class MethodSymbol extends Symbol<Method> {
 		public Object evaluate(Object instance) throws ClassNotFoundException,
 				NoSuchFieldException, NoSuchMethodException,
 				IllegalAccessException, InvocationTargetException {
+
+			if (quoted) {return this;}
 
 			Object[] evaluations = new Object[EXPRESSIONS.length];
 			for (int i=0; i<evaluations.length; i++) {

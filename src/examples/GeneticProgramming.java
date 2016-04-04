@@ -40,8 +40,8 @@ class GeneticProgramming {
 	// Integral computation
 
 	private static final double DX = 0.1;
-	private static final double LOWER_BOUND = -1.;
-	private static final double UPPER_BOUND = 1.;
+	@Symbolic private static final double LOWER_BOUND = -1.;
+	@Symbolic private static final double UPPER_BOUND = 1.;
 
 	// Execution
 
@@ -82,15 +82,26 @@ class GeneticProgramming {
 	// Evaluation of the individuals
 
 	private Double fitness(Symbol<?> $f) throws Exception {
-		return integral(LOWER_BOUND, UPPER_BOUND, $abs.apply($sub.apply($f,$target)));
+		// Two variants: semi-imperative computation (1) or full functional with quotation to prevent evaluation (2)
+		// (1) Semi-imperative
+		// return integral(LOWER_BOUND, UPPER_BOUND, $abs.apply($sub.apply($f,$target)));
+		// (2) Full functional with quotation to prevent evaluation
+		Symbol<?> $g = $integral.apply($LOWER_BOUND, $UPPER_BOUND, $abs.apply($sub.apply($f,$target)).quote());
+		return (Double)$g.evaluate(this);
 	}
 
-	@Symbolic // Only used to display the results
-	private Double integral(Double a, Double b, Symbol<?> $f) throws Exception {
+	@Symbolic private Double integral(Double a, Double b, Symbol<?> $f) throws Exception {
 		Double dx = b-a; // abs() not necessary since b > a
 		if (dx <= DX) {
 			x = (a+b)/2.;
-			return ((Double)$f.evaluate(this))*dx;
+			if (!$f.isQuoted()) {
+				// (1) Semi-imperative
+				return ((Double)$f.evaluate(this))*dx;
+			}
+			else {
+				// (2) Full functional
+				return ((Double)$f.unquote().evaluate(this))*dx;
+			}
 		}
 		else {
 			Double m = (a+b)/2.;

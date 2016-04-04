@@ -35,6 +35,8 @@ public class FieldSymbol extends Symbol<Field> {
 
 	@Override
 	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+		if (quoted) {return this;}
+
 		Field f = reflect();
 		f.setAccessible(true);
 		return f.get(instance);
