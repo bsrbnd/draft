@@ -44,5 +44,5 @@ public abstract class Symbol<T extends AccessibleObject> {
 
 	public boolean isQuoted() {return quoted;}
 	public Symbol<T> quote() {quoted=true; return this;}
-	public Symbol<T> unquote() {quoted=false; return this;} // TODO unquoteAll() recursive in AppliedSymbol?
+	public Symbol<T> unquote() {quoted=false; return this;}
 }

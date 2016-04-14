@@ -4,7 +4,10 @@ Copyright 2015-2016 Bernard Blaser
 SymProc is an annotation-processor prototype intended to
 experiment with new Java language features and shouldn't
 be used for any other purpose.
-SymProc has been influenced by the Lisp language.
+
+SymProc has been influenced by the foundations of the
+LISP language. For original publications, see:
+http://www-formal.stanford.edu/jmc/
 
 SymProc relies on OpenJDK 1.8 (langtools) undocumented API.
 Source code and useful information can be found at:

@@ -100,13 +100,22 @@ public class MethodSymbol extends Symbol<Method> {
 			if (quoted) {return this;}
 
 			Object[] evaluations = new Object[EXPRESSIONS.length];
+			boolean[] quotations = new boolean[EXPRESSIONS.length];
+
 			for (int i=0; i<evaluations.length; i++) {
 				evaluations[i] = EXPRESSIONS[i].evaluate(instance);
+				quotations[i] = EXPRESSIONS[i].isQuoted();
+				EXPRESSIONS[i].unquote();
 			}
 
 			Method m = reflect();
 			m.setAccessible(true);
-			return m.invoke(instance, evaluations);
+			Object result = m.invoke(instance, evaluations);
+
+			for (int i=0; i<quotations.length; i++) {
+				EXPRESSIONS[i].quoted = quotations[i];
+			}
+			return result;
 		}
 
 		@Override

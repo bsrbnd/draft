@@ -94,14 +94,7 @@ class GeneticProgramming {
 		Double dx = b-a; // abs() not necessary since b > a
 		if (dx <= DX) {
 			x = (a+b)/2.;
-			if (!$f.isQuoted()) {
-				// (1) Semi-imperative
-				return ((Double)$f.evaluate(this))*dx;
-			}
-			else {
-				// (2) Full functional
-				return ((Double)$f.unquote().evaluate(this))*dx;
-			}
+			return ((Double)$f.evaluate(this))*dx;
 		}
 		else {
 			Double m = (a+b)/2.;
