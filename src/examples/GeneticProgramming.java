@@ -18,7 +18,7 @@ package examples;
 import symprog.*;
 import java.util.Arrays;
 
-import static symprog.MethodSymbol.AppliedSymbol;
+import static symprog.MethodSymbol.ExpressionSymbol;
 
 /**
  * Example of a symbolic regression using the symbolic annotation processor SymProc.
@@ -94,7 +94,8 @@ class GeneticProgramming {
 		Double dx = b-a; // abs() not necessary since b > a
 		if (dx <= DX) {
 			x = (a+b)/2.;
-			return ((Double)$f.evaluate(this))*dx;
+			// Full functional with value capture
+			return (Double)$mul.apply($f,new Value(dx)).evaluate(this);
 		}
 		else {
 			Double m = (a+b)/2.;
@@ -127,16 +128,16 @@ class GeneticProgramming {
 
 	// Genetic operations (mutation and crossover)
 
-	private boolean mutation(Symbol<?> $s, int maxDepth) {
+	private boolean mutation(Term $s, int maxDepth) {
 		boolean modif = false;
-		if ($s instanceof AppliedSymbol) {
-			AppliedSymbol $f = (AppliedSymbol)$s;
+		if ($s instanceof ExpressionSymbol) {
+			ExpressionSymbol $f = (ExpressionSymbol)$s;
 			if (randomIndex(10) > 3) { // 70%
-				$f.EXPRESSIONS[randomIndex($f.EXPRESSIONS.length)] = randomExpression(maxDepth-1);
+				$f.TERMS[randomIndex($f.TERMS.length)] = randomExpression(maxDepth-1);
 				modif = true;
 			}
 			else {
-				for (Symbol<?> $e: $f.EXPRESSIONS) {
+				for (Term $e: $f.TERMS) {
 					if (mutation($e, maxDepth-1)) {
 						modif = true;
 						break;
@@ -147,20 +148,20 @@ class GeneticProgramming {
 		return modif;
 	}
 
-	private boolean crossover(Symbol<?> $a, Symbol<?> $b) { // maxDepth not necessary
+	private boolean crossover(Term $a, Term $b) { // maxDepth not necessary
 		boolean modif = false;
-		if (($a instanceof AppliedSymbol) && ($b instanceof AppliedSymbol)) {
-			AppliedSymbol $f = (AppliedSymbol)$a, $g = (AppliedSymbol)$b;
+		if (($a instanceof ExpressionSymbol) && ($b instanceof ExpressionSymbol)) {
+			ExpressionSymbol $f = (ExpressionSymbol)$a, $g = (ExpressionSymbol)$b;
 			if (randomIndex(10) > 3) { // 70%
-				int i = randomIndex($f.EXPRESSIONS.length);
-				Symbol<?> $t = $f.EXPRESSIONS[i];
-				$f.EXPRESSIONS[i] = $g.EXPRESSIONS[i];
-				$g.EXPRESSIONS[i] = $t;
+				int i = randomIndex($f.TERMS.length);
+				Term $t = $f.TERMS[i];
+				$f.TERMS[i] = $g.TERMS[i];
+				$g.TERMS[i] = $t;
 				modif = true;
 			}
 			else {
-				for (Symbol<?> $ef: $f.EXPRESSIONS) {
-					for (Symbol<?> $eg: $g.EXPRESSIONS) {
+				for (Term $ef: $f.TERMS) {
+					for (Term $eg: $g.TERMS) {
 						modif = crossover($ef, $eg);
 						if (modif) {break;}
 					}

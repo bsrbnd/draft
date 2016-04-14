@@ -23,7 +23,7 @@ import java.lang.reflect.*;
  * @author Bernard Blaser
  *
  */
-public abstract class Symbol<T extends AccessibleObject> {
+public abstract class Symbol<T extends AccessibleObject> extends Term {
 	protected final String CLASS_NAME;
 	protected final String NAME;
 	
@@ -35,12 +35,9 @@ public abstract class Symbol<T extends AccessibleObject> {
 	}
 	
 	@Override
-	public String toString() {return NAME;}
+	public String toString() {return quoted ? "'" + NAME : NAME;}
 	
 	public abstract T reflect() throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException;
-
-	public abstract Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException,
-			NoSuchMethodException, IllegalAccessException, InvocationTargetException;
 
 	public boolean isQuoted() {return quoted;}
 	public Symbol<T> quote() {quoted=true; return this;}

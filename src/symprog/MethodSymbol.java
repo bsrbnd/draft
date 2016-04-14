@@ -79,9 +79,9 @@ public class MethodSymbol extends Symbol<Method> {
 		return m.invoke(instance);
 	}
 
-	public AppliedSymbol apply(Symbol<?>... expressions) {
+	public ExpressionSymbol apply(Term... terms) {
 		// TODO check expressions types with method parameters?
-		return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, null, false, expressions);
+		return new ExpressionSymbol(CLASS_NAME, NAME, PARAMS, null, false, terms);
 	}
 
 	public BoundMethodSymbol bind(Object instance) {
@@ -99,8 +99,8 @@ public class MethodSymbol extends Symbol<Method> {
 		}
 
 		@Override
-		public AppliedSymbol apply(Symbol<?>... expressions) {
-			return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, INSTANCE, BOUND, expressions);
+		public ExpressionSymbol apply(Term... terms) {
+			return new ExpressionSymbol(CLASS_NAME, NAME, PARAMS, INSTANCE, BOUND, terms);
 		}
 
 		@Override
@@ -117,18 +117,18 @@ public class MethodSymbol extends Symbol<Method> {
 		}
 	}
 
-	public static class AppliedSymbol extends BoundMethodSymbol {
-		public final Symbol<?>[] EXPRESSIONS;
+	public static class ExpressionSymbol extends BoundMethodSymbol {
+		public final Term[] TERMS;
 
-		private AppliedSymbol(String class_name, String name, String[] params, Object instance, boolean bound,
-				Symbol<?>... expressions) {
+		private ExpressionSymbol(String class_name, String name, String[] params, Object instance, boolean bound,
+				Term... terms) {
 			super(class_name, name, params, instance, bound);
-			EXPRESSIONS = expressions != null ? expressions : new Symbol<?>[0];
+			TERMS = terms != null ? terms : new Term[0];
 		}
 
 		@Override
 		public BoundMethodSymbol bind(Object instance) {
-			return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, instance, true, EXPRESSIONS);
+			return new ExpressionSymbol(CLASS_NAME, NAME, PARAMS, instance, true, TERMS);
 		}
 
 		@Override
@@ -139,13 +139,15 @@ public class MethodSymbol extends Symbol<Method> {
 			if (quoted) {return this;}
 
 			Object boundInstance = BOUND ? INSTANCE : instance;
-			Object[] evaluations = new Object[EXPRESSIONS.length];
-			boolean[] quotations = new boolean[EXPRESSIONS.length];
+			Object[] evaluations = new Object[TERMS.length];
+			boolean[] quotations = new boolean[TERMS.length];
 
 			for (int i=0; i<evaluations.length; i++) {
-				evaluations[i] = EXPRESSIONS[i].evaluate(boundInstance);
-				quotations[i] = EXPRESSIONS[i].isQuoted();
-				EXPRESSIONS[i].unquote();
+				evaluations[i] = TERMS[i].evaluate(boundInstance);
+				if (TERMS[i] instanceof Symbol<?>) {
+					quotations[i] = ((Symbol<?>)TERMS[i]).isQuoted();
+					((Symbol<?>)TERMS[i]).unquote();
+				}
 			}
 
 			Method m = reflect();
@@ -153,7 +155,9 @@ public class MethodSymbol extends Symbol<Method> {
 			Object result = m.invoke(boundInstance, evaluations);
 
 			for (int i=0; i<quotations.length; i++) {
-				EXPRESSIONS[i].quoted = quotations[i];
+				if (TERMS[i] instanceof Symbol<?>) {
+					((Symbol<?>)TERMS[i]).quoted = quotations[i];
+				}
 			}
 			return result;
 		}
@@ -162,11 +166,11 @@ public class MethodSymbol extends Symbol<Method> {
 		public String toString() {
 			String name = super.toString();
 			String sep = "(";
-			for (int i=0; i<EXPRESSIONS.length; i++) {
-				name += sep + EXPRESSIONS[i];
+			for (int i=0; i<TERMS.length; i++) {
+				name += sep + TERMS[i];
 				sep = ",";
 			}
-			return EXPRESSIONS.length > 0 ? name + ")" : name;
+			return TERMS.length > 0 ? name + ")" : name;
 		}
 	}
 }
