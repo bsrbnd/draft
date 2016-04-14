@@ -81,15 +81,54 @@ public class MethodSymbol extends Symbol<Method> {
 
 	public AppliedSymbol apply(Symbol<?>... expressions) {
 		// TODO check expressions types with method parameters?
-		return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, expressions);
+		return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, null, false, expressions);
 	}
 
-	public static class AppliedSymbol extends MethodSymbol {
+	public BoundMethodSymbol bind(Object instance) {
+		return new BoundMethodSymbol(CLASS_NAME, NAME, PARAMS, instance, true);
+	}
+
+	public static class BoundMethodSymbol extends MethodSymbol {
+		protected final Object INSTANCE;
+		protected final boolean BOUND; // false = later binding for the all expression
+
+		private BoundMethodSymbol(String class_name, String name, String[] params, Object instance, boolean bound) {
+			super(class_name, name, params);
+			INSTANCE = instance;
+			BOUND = bound;
+		}
+
+		@Override
+		public AppliedSymbol apply(Symbol<?>... expressions) {
+			return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, INSTANCE, BOUND, expressions);
+		}
+
+		@Override
+		public Object evaluate(Object instance) throws ClassNotFoundException,
+				NoSuchFieldException, NoSuchMethodException,
+				IllegalAccessException, InvocationTargetException {
+			return super.evaluate(BOUND ? INSTANCE : instance);
+		}
+
+		@Override
+		public String toString() {
+			String name = BOUND ? "@" + NAME : NAME;
+			return quoted ? "'" + name : name;
+		}
+	}
+
+	public static class AppliedSymbol extends BoundMethodSymbol {
 		public final Symbol<?>[] EXPRESSIONS;
 
-		private AppliedSymbol(String class_name, String name, String[] params, Symbol<?>... expressions) {
-			super(class_name, name, params);
+		private AppliedSymbol(String class_name, String name, String[] params, Object instance, boolean bound,
+				Symbol<?>... expressions) {
+			super(class_name, name, params, instance, bound);
 			EXPRESSIONS = expressions != null ? expressions : new Symbol<?>[0];
+		}
+
+		@Override
+		public BoundMethodSymbol bind(Object instance) {
+			return new AppliedSymbol(CLASS_NAME, NAME, PARAMS, instance, true, EXPRESSIONS);
 		}
 
 		@Override
@@ -99,18 +138,19 @@ public class MethodSymbol extends Symbol<Method> {
 
 			if (quoted) {return this;}
 
+			Object boundInstance = BOUND ? INSTANCE : instance;
 			Object[] evaluations = new Object[EXPRESSIONS.length];
 			boolean[] quotations = new boolean[EXPRESSIONS.length];
 
 			for (int i=0; i<evaluations.length; i++) {
-				evaluations[i] = EXPRESSIONS[i].evaluate(instance);
+				evaluations[i] = EXPRESSIONS[i].evaluate(boundInstance);
 				quotations[i] = EXPRESSIONS[i].isQuoted();
 				EXPRESSIONS[i].unquote();
 			}
 
 			Method m = reflect();
 			m.setAccessible(true);
-			Object result = m.invoke(instance, evaluations);
+			Object result = m.invoke(boundInstance, evaluations);
 
 			for (int i=0; i<quotations.length; i++) {
 				EXPRESSIONS[i].quoted = quotations[i];
@@ -120,7 +160,7 @@ public class MethodSymbol extends Symbol<Method> {
 
 		@Override
 		public String toString() {
-			String name = NAME;
+			String name = super.toString();
 			String sep = "(";
 			for (int i=0; i<EXPRESSIONS.length; i++) {
 				name += sep + EXPRESSIONS[i];

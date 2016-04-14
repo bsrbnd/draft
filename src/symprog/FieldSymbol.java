@@ -41,4 +41,29 @@ public class FieldSymbol extends Symbol<Field> {
 		f.setAccessible(true);
 		return f.get(instance);
 	}
+
+	public BoundFieldSymbol bind(Object instance) {
+		return new BoundFieldSymbol(CLASS_NAME, NAME, instance);
+	}
+
+	public static class BoundFieldSymbol extends FieldSymbol {
+		private final Object INSTANCE;
+
+		private BoundFieldSymbol(String class_name, String name, Object instance) {
+			super(class_name, name);
+			INSTANCE = instance;
+		}
+
+		@Override
+		public Object evaluate(Object instance) throws ClassNotFoundException,
+				NoSuchFieldException, IllegalAccessException {
+			return super.evaluate(INSTANCE);
+		}
+
+		@Override
+		public String toString() {
+			String name = "@" + NAME;
+			return quoted ? "'" + name : name;
+		}
+	}
 }

@@ -19,15 +19,21 @@ import symprog.*;
 
 class DynamicExpression {
 	@Symbolic private Integer a = 3;
-	@Symbolic private Integer b = 2;
-	@Symbolic private Integer c = 1;
+	private static interface B {@Symbolic Integer b();}
+	private static interface C {@Symbolic Integer c();}
 
 	@Symbolic public Integer add(Integer i, Integer j) {return i + j;}
 	@Symbolic public Integer sub(Integer i, Integer j) {return i - j;}
 
 	public static void main(String[] args) {
 		try {
-			MethodSymbol $symbolicExpression = $add.apply($a, $sub.apply($b, $c));
+			B b = new B() {public Integer b() {return 2;}}; // Anonymous class
+			C c = () -> {return 1;}; // Lambda
+
+			Symbol<?> $b = B.$b.bind(b);
+			Symbol<?> $c = C.$c.bind(c);
+
+			Symbol<?> $symbolicExpression = $add.apply($a, $sub.apply($b, $c));
 			Integer d = (Integer)$symbolicExpression.evaluate(new DynamicExpression());
 
 			System.out.println($symbolicExpression + " evaluates to " + d);
