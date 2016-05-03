@@ -50,17 +50,18 @@ public abstract class Term implements Cloneable {
 	public List terms() {return List.NIL;}
 
 	protected boolean quoted = false; // Prevents evaluation
-	public Term quote() throws CloneNotSupportedException {
-		Term t = (Term)clone();
-		t.quoted=true;
-		return t;
+	public Term quote() throws SymbolicException {
+		try {
+			Term t = (Term)clone();
+			t.quoted=true;
+			return t;
+		}
+		catch (Exception e) {throw new SymbolicException(e);}
 	}
 
-	public abstract Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException,
-			NoSuchMethodException, IllegalAccessException, InvocationTargetException;
+	public abstract Object evaluate(Object instance) throws SymbolicException;
 
-	public Object evaluate() throws ClassNotFoundException, NoSuchFieldException,
-			NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+	public Object evaluate() throws SymbolicException {
 		return evaluate(null);
 	}
 }

@@ -70,13 +70,15 @@ public class MethodSymbol extends Symbol<Method> {
 	}
 
 	@Override
-	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException,
-			IllegalAccessException, InvocationTargetException {
+	public Object evaluate(Object instance) throws SymbolicException {
 		if (quoted) {return this;}
 
-		Method m = reflect();
-		m.setAccessible(true);
-		return m.invoke(instance);
+		try {
+			Method m = reflect();
+			m.setAccessible(true);
+			return m.invoke(instance);
+		}
+		catch (Exception e) {throw new SymbolicException(e);}
 	}
 
 	public ExpressionSymbol apply(Term... terms) {
@@ -104,9 +106,7 @@ public class MethodSymbol extends Symbol<Method> {
 		}
 
 		@Override
-		public Object evaluate(Object instance) throws ClassNotFoundException,
-				NoSuchFieldException, NoSuchMethodException,
-				IllegalAccessException, InvocationTargetException {
+		public Object evaluate(Object instance) throws SymbolicException {
 			return super.evaluate(BOUND ? INSTANCE : instance);
 		}
 
@@ -135,9 +135,7 @@ public class MethodSymbol extends Symbol<Method> {
 		}
 
 		@Override
-		public Object evaluate(Object instance) throws ClassNotFoundException,
-				NoSuchFieldException, NoSuchMethodException,
-				IllegalAccessException, InvocationTargetException {
+		public Object evaluate(Object instance) throws SymbolicException {
 
 			if (quoted) {return this;}
 
@@ -151,9 +149,13 @@ public class MethodSymbol extends Symbol<Method> {
 				TERMS[i].quoted = false;
 			}
 
-			Method m = reflect();
-			m.setAccessible(true);
-			Object result = m.invoke(boundInstance, evaluations);
+			Object result = null;
+			try {
+				Method m = reflect();
+				m.setAccessible(true);
+				result = m.invoke(boundInstance, evaluations);
+			}
+			catch (Exception e) {throw new SymbolicException(e);}
 
 			for (int i=0; i<quotations.length; i++) {
 				TERMS[i].quoted = quotations[i];

@@ -74,7 +74,7 @@ class GeneticProgramming {
 
 	// Evaluation of the individuals
 
-	private Double fitness(Term $f) throws Exception {
+	private Double fitness(Term $f) {
 		// Two variants: semi-imperative computation (1) or full functional with quotation to prevent evaluation (2)
 		// (1) Semi-imperative
 		// return integral(LOWER_BOUND, UPPER_BOUND, $abs.apply($sub.apply($f,$target)));
@@ -83,7 +83,7 @@ class GeneticProgramming {
 		return (Double)$g.evaluate(this);
 	}
 
-	@Symbolic private Double integral(Double a, Double b, Term $f) throws Exception {
+	@Symbolic private Double integral(Double a, Double b, Term $f) {
 		Double dx = b-a; // abs() not necessary since b > a
 		if (dx <= DX) {
 			x = (a+b)/2.;

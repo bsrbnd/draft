@@ -34,12 +34,15 @@ public class FieldSymbol extends Symbol<Field> {
 	}
 
 	@Override
-	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+	public Object evaluate(Object instance) throws SymbolicException {
 		if (quoted) {return this;}
 
-		Field f = reflect();
-		f.setAccessible(true);
-		return f.get(instance);
+		try {
+			Field f = reflect();
+			f.setAccessible(true);
+			return f.get(instance);
+		}
+		catch (Exception e) {throw new SymbolicException(e);}
 	}
 
 	public BoundFieldSymbol bind(Object instance) {
@@ -55,8 +58,7 @@ public class FieldSymbol extends Symbol<Field> {
 		}
 
 		@Override
-		public Object evaluate(Object instance) throws ClassNotFoundException,
-				NoSuchFieldException, IllegalAccessException {
+		public Object evaluate(Object instance) throws SymbolicException {
 			return super.evaluate(INSTANCE);
 		}
 

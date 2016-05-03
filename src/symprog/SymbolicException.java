@@ -15,26 +15,12 @@
  */
 package symprog;
 
-import java.lang.reflect.*;
-
 /**
- * Symbolic expression's captured value from the execution context.
+ * Symbolic exception.
  * 
  * @author Bernard Blaser
  *
  */
-public class Value extends Term {
-	private final Object VALUE;
-
-	public Value(Object value) {VALUE = value;}
-
-	@Override
-	public Object evaluate(Object instance) throws SymbolicException {
-		if (quoted) {return this;}
-
-		return VALUE;
-	}
-
-	@Override
-	public String toString() {return quoted ? "'#" : "#";}
+public class SymbolicException extends RuntimeException {
+	public SymbolicException(Throwable cause) {super(cause);}
 }
