@@ -122,43 +122,40 @@ class GeneticProgramming {
 	// Genetic operations (mutation and crossover)
 
 	private boolean mutation(Term $s, int maxDepth) {
-		boolean modif = false;
 		if (!$s.atomic()) {
 			if (randomIndex(10) > 3) { // 70%
 				$s.terms().set(randomIndex($s.terms().size()), randomExpression(maxDepth-1));
-				modif = true;
+				return true;
 			}
 			else {
-				for (int i=0; i<$s.terms().size(); i++) {
-					if (mutation($s.terms().get(i), maxDepth-1)) {
-						modif = true;
-						break;
-					}
-				}
+				Pt p = $t -> mutation($t, maxDepth-1);
+				return anyMatch(Pt.$p.bind(p), $s.terms());
 			}
 		}
-		return modif;
+		return false;
 	}
 
 	private boolean crossover(Term $a, Term $b) { // maxDepth not necessary
-		boolean modif = false;
 		if (!$a.atomic() && !$b.atomic()) {
 			if (randomIndex(10) > 3) { // 70%
 				int i = randomIndex($a.terms().size());
 				$a.terms().set(i, $b.terms().set(i, $a.terms().get(i)));
-				modif = true;
+				return true;
 			}
 			else {
-				for (int a=0; a<$a.terms().size(); a++) {
-					for (int b=0; b<$b.terms().size(); b++) {
-						modif = crossover($a.terms().get(a), $b.terms().get(b));
-						if (modif) {break;}
-					}
-					if (modif) {break;}
-				}
+				Pt pa = $ta -> {
+					Pt pb = $tb -> crossover($ta, $tb);
+					return anyMatch(Pt.$p.bind(pb), $b.terms());
+				};
+				return anyMatch(Pt.$p.bind(pa), $a.terms());
 			}
 		}
-		return modif;
+		return false;
+	}
+
+	private static interface Pt {@Symbolic boolean p(Term t);} // Symbolic predicate of a term.
+	@Symbolic private static boolean anyMatch(MethodSymbol $p, Term.List terms) {
+		return terms.stream().anyMatch($t->(Boolean)$p.apply($t.quote()).evaluate());
 	}
 
 	// Individual representation
