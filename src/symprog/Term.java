@@ -17,7 +17,14 @@ package symprog;
 
 import java.lang.reflect.*;
 
-public abstract class Term {
+public abstract class Term implements Cloneable {
+	protected boolean quoted = false; // Prevents evaluation
+	public Term quote() throws CloneNotSupportedException {
+		Term t = (Term)clone();
+		t.quoted=true;
+		return t;
+	}
+
 	public abstract Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException,
 			NoSuchMethodException, IllegalAccessException, InvocationTargetException;
 

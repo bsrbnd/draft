@@ -27,8 +27,6 @@ public abstract class Symbol<T extends AccessibleObject> extends Term {
 	protected final String CLASS_NAME;
 	protected final String NAME;
 	
-	protected boolean quoted = false; // Prevents evaluation
-	
 	protected Symbol(String class_name, String name) {
 		CLASS_NAME = class_name;
 		NAME = name;
@@ -38,8 +36,4 @@ public abstract class Symbol<T extends AccessibleObject> extends Term {
 	public String toString() {return quoted ? "'" + NAME : NAME;}
 	
 	public abstract T reflect() throws ClassNotFoundException, NoSuchFieldException, NoSuchMethodException;
-
-	public boolean isQuoted() {return quoted;}
-	public Symbol<T> quote() {quoted=true; return this;}
-	public Symbol<T> unquote() {quoted=false; return this;}
 }

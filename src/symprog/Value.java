@@ -25,9 +25,11 @@ public class Value extends Term {
 	@Override
 	public Object evaluate(Object instance) throws ClassNotFoundException, NoSuchFieldException,
 			NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+		if (quoted) {return this;}
+
 		return VALUE;
 	}
 
 	@Override
-	public String toString() {return "#";}
+	public String toString() {return quoted ? "'#" : "#";}
 }

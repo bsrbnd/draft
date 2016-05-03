@@ -144,10 +144,8 @@ public class MethodSymbol extends Symbol<Method> {
 
 			for (int i=0; i<evaluations.length; i++) {
 				evaluations[i] = TERMS[i].evaluate(boundInstance);
-				if (TERMS[i] instanceof Symbol<?>) {
-					quotations[i] = ((Symbol<?>)TERMS[i]).isQuoted();
-					((Symbol<?>)TERMS[i]).unquote();
-				}
+				quotations[i] = TERMS[i].quoted;
+				TERMS[i].quoted = false;
 			}
 
 			Method m = reflect();
@@ -155,9 +153,7 @@ public class MethodSymbol extends Symbol<Method> {
 			Object result = m.invoke(boundInstance, evaluations);
 
 			for (int i=0; i<quotations.length; i++) {
-				if (TERMS[i] instanceof Symbol<?>) {
-					((Symbol<?>)TERMS[i]).quoted = quotations[i];
-				}
+				TERMS[i].quoted = quotations[i];
 			}
 			return result;
 		}
