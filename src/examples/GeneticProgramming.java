@@ -58,40 +58,37 @@ class GeneticProgramming {
 
 	// Functions
 
-	@Symbolic private Double add(Double i, Double j) {return i + j;}
-	@Symbolic private Double sub(Double i, Double j) {return i - j;}
-	@Symbolic private Double mul(Double i, Double j) {return i * j;}
-	@Symbolic private Double abs(Double i) {return i < 0. ? -i : i;}
+	@Symbolic private static Double add(Double i, Double j) {return i + j;}
+	@Symbolic private static Double sub(Double i, Double j) {return i - j;}
+	@Symbolic private static Double mul(Double i, Double j) {return i * j;}
+	@Symbolic private static Double abs(Double i) {return i < 0. ? -i : i;}
 
 	// Target formula (not a function) with the free variable x: x*x - 2*x + 1
 	// (notice that a constant method symbol can be used like $b or $a.apply())
-	private final Term $target = $add.apply($sub.apply($mul.apply($x,$x), $mul.apply($b, $x)), $a.apply());
+	private final Term $target = $add.apply($sub.apply($mul.apply($x,$x), $mul.apply($b, $x)), $a.apply()).bind(this);
 
 	// Functions and terminals sets used to construct expressions
 
 	private MethodSymbol[] functions = new MethodSymbol[] {$add, $sub, $mul};
-	private Term[] terminals = new Term[] {new Value(A), $b, $x}; // Notice the captured value A.
+	private Term[] terminals = new Term[] {new Value(A), $b.bind(this), $x.bind(this)}; // Notice the captured value A.
 
 	// Evaluation of the individuals
 
 	private Double fitness(Term $f) {
-		// Two variants: semi-imperative computation (1) or full functional with quotation to prevent evaluation (2)
-		// (1) Semi-imperative
-		// return integral(LOWER_BOUND, UPPER_BOUND, $abs.apply($sub.apply($f,$target)));
-		// (2) Full functional with quotation to prevent evaluation
-		Term $g = $integral.apply($LOWER_BOUND, $UPPER_BOUND, $abs.apply($sub.apply($f,$target)).quote());
-		return (Double)$g.evaluate(this);
+		// Using a lambda to transform a formula to a function.
+		Fx g = x -> {this.x=x; return (Double)$abs.apply($sub.apply($f,$target)).evaluate();};
+		return integral(LOWER_BOUND, UPPER_BOUND, Fx.$f.bind(g));
 	}
 
-	@Symbolic private Double integral(Double a, Double b, Term $f) {
-		Double dx = b-a; // abs() not necessary since b > a
+	public static interface Fx {@Symbolic Double f(Double x);}
+
+	@Symbolic private static Double integral(Double a, Double b, MethodSymbol $f) {
+		Double dx = b-a, m = (a+b)/2.; // abs(b-a) not necessary since b > a
 		if (dx <= DX) {
-			x = (a+b)/2.;
-			// Full functional with value capture
-			return (Double)$mul.apply($f,new Value(dx)).evaluate(this);
+			// Fully symbolic with value capture
+			return (Double)$mul.apply($f.apply(new Value(m)),new Value(dx)).evaluate();
 		}
 		else {
-			Double m = (a+b)/2.;
 			return integral(a,m,$f) + integral(m,b,$f);
 		}
 	}
@@ -129,7 +126,9 @@ class GeneticProgramming {
 			}
 			else {
 				Pt p = $t -> mutation($t, maxDepth-1);
-				return anyMatch(Pt.$p.bind(p), $s.terms());
+				T t = $s::terms;
+				// Fully symbolic with quotation to prevent evaluation.
+				return (Boolean)$anyMatch.apply(Pt.$p.bind(p).quote(), T.$t.bind(t)).evaluate();
 			}
 		}
 		return false;
@@ -154,6 +153,8 @@ class GeneticProgramming {
 	}
 
 	private static interface Pt {@Symbolic boolean p(Term t);} // Symbolic predicate of a term.
+	private static interface T {@Symbolic Term.List t();}
+
 	@Symbolic private static boolean anyMatch(MethodSymbol $p, Term.List terms) {
 		return terms.stream().anyMatch($t->(Boolean)$p.apply($t.quote()).evaluate());
 	}
@@ -184,10 +185,14 @@ class GeneticProgramming {
 
 	public void run() {
 		try {
-			String given = "|-given: " + $a + "=" + a() + "," + $b + "=" + b() + "," + terminals[0] + "=" + A;
+			Fx f = x -> {this.x=x; return (Double)$target.evaluate();};
+			Term $g = $integral.apply($LOWER_BOUND, $UPPER_BOUND, Fx.$f.bind(f).quote());
 
 			System.out.println("Target: " + $target);
-			System.out.println(given + "," + $integral + "=" + integral(LOWER_BOUND, UPPER_BOUND, $target));
+			System.out.println("|-" + $g + "=" + $g.evaluate());
+			System.out.println("|-given: " +
+				$a + "=" + a() + "," + $b + "=" + b() + "," + terminals[0] + "=" + A + "," +
+				$LOWER_BOUND + "=" + LOWER_BOUND + "," + $UPPER_BOUND + "=" + UPPER_BOUND);
 
 			Individual[] pop = new Individual[POP_SIZE];
 
