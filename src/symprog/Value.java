@@ -17,6 +17,12 @@ package symprog;
 
 import java.lang.reflect.*;
 
+/**
+ * Symbolic expression's captured value in the execution context.
+ * 
+ * @author Bernard Blaser
+ *
+ */
 public class Value extends Term {
 	private final Object VALUE;
 

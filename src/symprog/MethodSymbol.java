@@ -118,13 +118,16 @@ public class MethodSymbol extends Symbol<Method> {
 	}
 
 	public static class ExpressionSymbol extends BoundMethodSymbol {
-		public final Term[] TERMS;
+		private final Term[] TERMS;
 
 		private ExpressionSymbol(String class_name, String name, String[] params, Object instance, boolean bound,
 				Term... terms) {
 			super(class_name, name, params, instance, bound);
 			TERMS = terms != null ? terms : new Term[0];
 		}
+
+		@Override
+		public List terms() {return new List(TERMS);}
 
 		@Override
 		public BoundMethodSymbol bind(Object instance) {

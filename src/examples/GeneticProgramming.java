@@ -18,8 +18,6 @@ package examples;
 import symprog.*;
 import java.util.Arrays;
 
-import static symprog.MethodSymbol.ExpressionSymbol;
-
 /**
  * Example of a symbolic regression using the symbolic annotation processor SymProc.
  *
@@ -51,13 +49,11 @@ class GeneticProgramming {
 
 	// Terminal symbols
 
-	// Constants (two possibilities: final fields (1) or constant methods (2))
-	// (1) Final Fields
-	// @Symbolic private final Double a = 1., b = 2.;
-	// (2) Constant Methods
-	@Symbolic private Double a() {return 1.;}
-	@Symbolic private Double b() {return 2.;}
-	// Variable
+	// Constants (notice that final fields would be also possible)
+	private static final double A=1., B=2.;
+	@Symbolic private Double a() {return A;}
+	@Symbolic private Double b() {return B;}
+	// Variable (free, but bound to an instance)
 	@Symbolic private Double x;
 
 	// Functions
@@ -67,30 +63,27 @@ class GeneticProgramming {
 	@Symbolic private Double mul(Double i, Double j) {return i * j;}
 	@Symbolic private Double abs(Double i) {return i < 0. ? -i : i;}
 
-	// Target function: x*x - 2*x + 1 (two possibilities: with final fields (1) or with constant methods (2))
-
-	// (1) Final Fields
-	// private final MethodSymbol $target = $add.apply($sub.apply($mul.apply($x,$x), $mul.apply($b, $x)), $a);
-	// (2) Constant Methods: notice that a constant method symbol can be used like $b or $a.apply()
-	private final MethodSymbol $target = $add.apply($sub.apply($mul.apply($x,$x), $mul.apply($b, $x)), $a.apply());
+	// Target formula (not a function) with the free variable x: x*x - 2*x + 1
+	// (notice that a constant method symbol can be used like $b or $a.apply())
+	private final Term $target = $add.apply($sub.apply($mul.apply($x,$x), $mul.apply($b, $x)), $a.apply());
 
 	// Functions and terminals sets used to construct expressions
 
 	private MethodSymbol[] functions = new MethodSymbol[] {$add, $sub, $mul};
-	private Symbol<?>[] terminals = new Symbol<?>[] {$a, $b, $x};
+	private Term[] terminals = new Term[] {new Value(A), $b, $x}; // Notice the captured value A.
 
 	// Evaluation of the individuals
 
-	private Double fitness(Symbol<?> $f) throws Exception {
+	private Double fitness(Term $f) throws Exception {
 		// Two variants: semi-imperative computation (1) or full functional with quotation to prevent evaluation (2)
 		// (1) Semi-imperative
 		// return integral(LOWER_BOUND, UPPER_BOUND, $abs.apply($sub.apply($f,$target)));
 		// (2) Full functional with quotation to prevent evaluation
-		Symbol<?> $g = $integral.apply($LOWER_BOUND, $UPPER_BOUND, $abs.apply($sub.apply($f,$target)).quote());
+		Term $g = $integral.apply($LOWER_BOUND, $UPPER_BOUND, $abs.apply($sub.apply($f,$target)).quote());
 		return (Double)$g.evaluate(this);
 	}
 
-	@Symbolic private Double integral(Double a, Double b, Symbol<?> $f) throws Exception {
+	@Symbolic private Double integral(Double a, Double b, Term $f) throws Exception {
 		Double dx = b-a; // abs() not necessary since b > a
 		if (dx <= DX) {
 			x = (a+b)/2.;
@@ -109,15 +102,15 @@ class GeneticProgramming {
 		return (int) (Math.random() * size);
 	}
 
-	private Symbol<?> randomExpression(int maxDepth) {
+	private Term randomExpression(int maxDepth) {
 		if (maxDepth==0) {
 			return terminals[randomIndex(terminals.length)];
 		}
 		else {
 			if (randomIndex(10) > 3) { // 70%
 				MethodSymbol $func = functions[randomIndex(functions.length)];
-				Symbol<?> $term1 = randomExpression(maxDepth-1);
-				Symbol<?> $term2 = randomExpression(maxDepth-1);
+				Term $term1 = randomExpression(maxDepth-1);
+				Term $term2 = randomExpression(maxDepth-1);
 				return $func.apply($term1, $term2);
 			}
 			else {
@@ -130,15 +123,14 @@ class GeneticProgramming {
 
 	private boolean mutation(Term $s, int maxDepth) {
 		boolean modif = false;
-		if ($s instanceof ExpressionSymbol) {
-			ExpressionSymbol $f = (ExpressionSymbol)$s;
+		if (!$s.atomic()) {
 			if (randomIndex(10) > 3) { // 70%
-				$f.TERMS[randomIndex($f.TERMS.length)] = randomExpression(maxDepth-1);
+				$s.terms().set(randomIndex($s.terms().size()), randomExpression(maxDepth-1));
 				modif = true;
 			}
 			else {
-				for (Term $e: $f.TERMS) {
-					if (mutation($e, maxDepth-1)) {
+				for (int i=0; i<$s.terms().size(); i++) {
+					if (mutation($s.terms().get(i), maxDepth-1)) {
 						modif = true;
 						break;
 					}
@@ -150,19 +142,16 @@ class GeneticProgramming {
 
 	private boolean crossover(Term $a, Term $b) { // maxDepth not necessary
 		boolean modif = false;
-		if (($a instanceof ExpressionSymbol) && ($b instanceof ExpressionSymbol)) {
-			ExpressionSymbol $f = (ExpressionSymbol)$a, $g = (ExpressionSymbol)$b;
+		if (!$a.atomic() && !$b.atomic()) {
 			if (randomIndex(10) > 3) { // 70%
-				int i = randomIndex($f.TERMS.length);
-				Term $t = $f.TERMS[i];
-				$f.TERMS[i] = $g.TERMS[i];
-				$g.TERMS[i] = $t;
+				int i = randomIndex($a.terms().size());
+				$a.terms().set(i, $b.terms().set(i, $a.terms().get(i)));
 				modif = true;
 			}
 			else {
-				for (Term $ef: $f.TERMS) {
-					for (Term $eg: $g.TERMS) {
-						modif = crossover($ef, $eg);
+				for (int a=0; a<$a.terms().size(); a++) {
+					for (int b=0; b<$b.terms().size(); b++) {
+						modif = crossover($a.terms().get(a), $b.terms().get(b));
 						if (modif) {break;}
 					}
 					if (modif) {break;}
@@ -178,9 +167,9 @@ class GeneticProgramming {
 		@Symbolic // Only for use in toString()
 		public Double fitness;
 
-		public final Symbol<?> $expression;
+		public final Term $expression;
 
-		public Individual(Symbol<?> $expression, Double fitness) {
+		public Individual(Term $expression, Double fitness) {
 			this.$expression = $expression; this.fitness = fitness;
 		}
 		@Override
@@ -192,14 +181,13 @@ class GeneticProgramming {
 		public String toString() {
 			return $expression + " " + $fitness + "=" + fitness;
 		}
+
+		// TODO clone() not necessary since every individual is used only once for genetic operations.
 	}
 
 	public void run() {
 		try {
-			// Final fields:
-			// String given = "|-given: " + $a + "=" + a + "," + $b + "=" + b;
-			// Or constant methods:
-			String given = "|-given: " + $a + "=" + a() + "," + $b + "=" + b();
+			String given = "|-given: " + $a + "=" + a() + "," + $b + "=" + b() + "," + terminals[0] + "=" + A;
 
 			System.out.println("Target: " + $target);
 			System.out.println(given + "," + $integral + "=" + integral(LOWER_BOUND, UPPER_BOUND, $target));
@@ -207,7 +195,7 @@ class GeneticProgramming {
 			Individual[] pop = new Individual[POP_SIZE];
 
 			for (int i=0; i<POP_SIZE; i++) {
-				Symbol<?> $expr = randomExpression(MAX_DEPTH);
+				Term $expr = randomExpression(MAX_DEPTH);
 				pop[i] = new Individual($expr, fitness($expr));
 			}
 			for (int j=0; j<MAX_ITER; j++) {
@@ -223,8 +211,6 @@ class GeneticProgramming {
 					// TODO Could be checked at every iteration
 					if (pop[0].fitness < END) {break;}
 				}
-
-				// TODO Symbol.clone() for genetic operations (but not necessary since no need of new individuals)
 
 				// The best ones are reproduced without modification.
 				// Crossover

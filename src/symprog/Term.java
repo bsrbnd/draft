@@ -16,8 +16,39 @@
 package symprog;
 
 import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
+/**
+ * Symbolic expression's term.
+ * 
+ * @author Bernard Blaser
+ *
+ */
 public abstract class Term implements Cloneable {
+	public static class List {
+		public static final List NIL = new List(new Term[0]);
+
+		private final Term[] TERMS;
+		protected List(Term... terms) {TERMS=terms;}
+
+		public int size() {return TERMS.length;}
+		public Term get(int i) {return TERMS[i];}
+		public Term set(int i, Term t) { // Returns the old Term
+			Term old=TERMS[i];
+			TERMS[i]=t;
+			return old;
+		}
+
+		// Iterative or functional terms' access (stream doesn't need to be closed).
+		public Stream<Term> stream() {
+			return Arrays.stream(TERMS);
+		}
+	}
+
+	public boolean atomic() {return terms().size() == 0;}
+	public List terms() {return List.NIL;}
+
 	protected boolean quoted = false; // Prevents evaluation
 	public Term quote() throws CloneNotSupportedException {
 		Term t = (Term)clone();
