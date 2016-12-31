@@ -23,4 +23,5 @@ package symprog;
  */
 public class SymbolicException extends RuntimeException {
 	public SymbolicException(Throwable cause) {super(cause);}
+	public SymbolicException(String message, Throwable cause) {super(message, cause);}
 }

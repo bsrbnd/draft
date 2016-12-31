@@ -33,16 +33,24 @@ public abstract class Term implements Cloneable {
 		protected List(Term... terms) {TERMS=terms;}
 
 		public int size() {return TERMS.length;}
+		// Fast (imperative) indexed terms' access.
 		public Term get(int i) {return TERMS[i];}
 		public Term set(int i, Term t) { // Returns the old Term
 			Term old=TERMS[i];
 			TERMS[i]=t;
 			return old;
 		}
+		public void set(Term... terms) {
+			for (int i=0; i<TERMS.length && i<terms.length; i++)
+				TERMS[i] = terms[i];
+		}
 
 		// Iterative or functional terms' access (stream doesn't need to be closed).
 		public Stream<Term> stream() {
 			return Arrays.stream(TERMS);
+		}
+		public void set(Stream<Term> stream) {
+			set(stream.toArray(l->new Term[l]));
 		}
 	}
 

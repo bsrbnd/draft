@@ -81,7 +81,9 @@ public class MethodSymbol extends Symbol<Method> {
 		catch (Exception e) {throw new SymbolicException(e);}
 	}
 
-	public ExpressionSymbol apply(Term... terms) {
+	@Deprecated
+	public ExpressionSymbol apply(Term... terms) { return build(terms); }
+	public ExpressionSymbol build(Term... terms) {
 		// TODO check expressions types with method parameters?
 		return new ExpressionSymbol(CLASS_NAME, NAME, PARAMS, null, false, terms);
 	}
@@ -101,7 +103,7 @@ public class MethodSymbol extends Symbol<Method> {
 		}
 
 		@Override
-		public ExpressionSymbol apply(Term... terms) {
+		public ExpressionSymbol build(Term... terms) {
 			return new ExpressionSymbol(CLASS_NAME, NAME, PARAMS, INSTANCE, BOUND, terms);
 		}
 
@@ -143,17 +145,26 @@ public class MethodSymbol extends Symbol<Method> {
 			Object[] evaluations = new Object[TERMS.length];
 			boolean[] quotations = new boolean[TERMS.length];
 
+			String actual = "", sep = "", expected = "";
 			for (int i=0; i<evaluations.length; i++) {
 				evaluations[i] = TERMS[i].evaluate(boundInstance);
 				quotations[i] = TERMS[i].quoted;
 				TERMS[i].quoted = false;
+
+				actual += sep + evaluations[i];
+				sep = ", ";
 			}
 
 			Object result = null;
 			try {
 				Method m = reflect();
+				expected = m.toString();
+
 				m.setAccessible(true);
 				result = m.invoke(boundInstance, evaluations);
+			}
+			catch (IllegalArgumentException e) {
+				throw new SymbolicException("expected -> " + expected + ", actual -> " + actual, e);
 			}
 			catch (Exception e) {throw new SymbolicException(e);}
 

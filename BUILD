@@ -8,6 +8,7 @@ Building the examples using the SymProc processor:
 Running the examples:
  cd ../bin
  java examples.Example
+ java examples.Example2
  java examples.DynamicExpression
  java examples.GeneticProgramming
 
