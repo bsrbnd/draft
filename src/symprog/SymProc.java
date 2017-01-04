@@ -34,7 +34,7 @@ import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.jvm.ClassReader;
 
 /**
- * Annotations processor that provides symbolic access to class members.
+ * Annotation processor that provides symbolic access to class members.
  * 
  * @author Bernard Blaser
  *
@@ -75,42 +75,44 @@ public class SymProc extends AbstractProcessor {
 		@Override
 		public void visitClassDef(JCClassDecl tree) {
 			super.visitClassDef(tree);
-			
+
 			if (tree.sym != null) {
 				// Not anonymous
 				System.out.println("Generate symbols for class: " +
 				tree.sym.flatname);
-				
+
 				generateSymbols(tree);
 			}
 		}
 
 		private void generateSymbols(JCClassDecl clazz) {
 			List<JCTree> newDefs = List.from(clazz.defs);
-			
+
 			for (JCTree decl: clazz.defs) {
 				if (decl instanceof JCMethodDecl) {
 					JCMethodDecl met = (JCMethodDecl) decl;
 					// TODO remove annotation after processing?
 					Symbolic symbolic = met.sym.getAnnotation(Symbolic.class);
 					Name name = met.name;
-					
+
 					if (symbolic != null) {
 						// TODO compiler output?
 						System.out.println("|-" + name + " -> " + symbolic.value()+name+symbolic.suffix());
-					
+
 						List<String> paramsTypes = List.nil();
-					
+
 						for (VarSymbol param: met.sym.getParameters()) {
 							Type erasure = param.erasure(types);
 							paramsTypes = paramsTypes.append(translate(erasure));
 						}
-						
+
 						newDefs = newDefs.append(generateSymbol(
 								MethodSymbol.class.getName(),
 								symbolic,
 								clazz.sym.flatname.toString(),
 								name.toString(),
+								met.sym.flags(),
+								decl.getStartPosition(),
 								paramsTypes));
 					}
 				}
@@ -118,18 +120,20 @@ public class SymProc extends AbstractProcessor {
 					JCVariableDecl var = (JCVariableDecl) decl;
 					Symbolic symbolic = var.sym.getAnnotation(Symbolic.class);
 					Name name = var.name;
-					
+
 					if (symbolic != null) {
 						System.out.println("|-" + name + " -> " + symbolic.value()+name+symbolic.suffix());
-						
+
 						newDefs = newDefs.append(generateSymbol(
 								FieldSymbol.class.getName(),
 								symbolic,
 								clazz.sym.flatname.toString(),
 								name.toString(),
+								var.sym.flags(),
+								decl.getStartPosition(),
 								null));
 					}
-					
+
 				}
 			}
 			clazz.defs = newDefs;
@@ -144,6 +148,8 @@ public class SymProc extends AbstractProcessor {
 		 * @param className : member's flat class name
 		 * (ex. <b><code>mypackage.MyClass$MyInner</code></b>)
 		 * @param name : member's name
+		 * @param flags : member's access flags
+		 * @param position : member's position
 		 * @param params : method's parameter types; compatible with <b><code>Class.forName()</code></b>,
 		 * <b><code>null</code></b> for fields
 		 * 
@@ -154,14 +160,18 @@ public class SymProc extends AbstractProcessor {
 				Symbolic symbolic,
 				String className,
 				String name,
+				long flags,
+				int position,
 				List<String> params
 		) {
+			className = symbolic.origin().isEmpty() ? className : symbolic.origin();
+
 			JCExpression[] symbolParams = new JCExpression[] {
 					nodes.Literal(className),
 					nodes.Literal(name)
 			};
 			List<JCExpression> paramslist = List.from(symbolParams);
-			
+
 			if(params != null) {
 				List<JCExpression> erasures = List.nil();
 				
@@ -174,19 +184,19 @@ public class SymProc extends AbstractProcessor {
 						List.nil(),
 						erasures));
 			}
-			
+
 			ClassSymbol cs = classes.loadClass(names.fromString(symbolTypeName));
 			JCExpression symbolType = nodes.QualIdent(cs);
-			
+
 			JCExpression newSymbol = nodes.NewClass(
 					null, null,
 					symbolType,
 					paramslist,
 					null
 			);
-			
-			return nodes.VarDef(
-					nodes.Modifiers(Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL),
+
+			return nodes.at(position).VarDef(
+					nodes.Modifiers(symbolic.flags() != Symbolic.SAME ? symbolic.flags() : flags),
 					names.fromString(symbolic.value() + name + symbolic.suffix()),
 					symbolType,
 					newSymbol);
@@ -194,7 +204,7 @@ public class SymProc extends AbstractProcessor {
 
 		private String translate(Type type) {
 			String trim = "";
-			
+
 			if (type instanceof Type.ArrayType) {
 				Type elem = type;
 				while (elem instanceof Type.ArrayType) {
@@ -206,9 +216,9 @@ public class SymProc extends AbstractProcessor {
 			else {
 				trim = type.tsym.flatName().toString().trim();
 			}
-			
+
 			System.out.println(" |-" + trim);
-			
+
 			return trim;
 		}
 

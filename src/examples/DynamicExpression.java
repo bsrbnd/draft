@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Bernard Blaser
+ * Copyright 2016-2017 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,29 +15,78 @@
  */
 package examples;
 
-import symprog.*;
+import symprog.Symbolic;
+import symprog.Term;
+import java.util.function.*;
+
+import static symprog.Symbolic.*;
 
 class DynamicExpression {
-	@Symbolic private Integer a = 3;
-	private static interface B {@Symbolic Integer b();}
-	private static interface C {@Symbolic Integer c();}
+	class Inner {
+		@Symbolic(value="_", flags=SAME)
+		private Integer a = 3;
 
-	@Symbolic public Integer add(Integer i, Integer j) {return i + j;}
-	@Symbolic public Integer sub(Integer i, Integer j) {return i - j;}
+		private Integer add(Integer i, Integer j) { return i + j; }
+	}
+
+	static interface B {
+		@Symbolic("_")
+		Integer b();
+	}
+
+	@FunctionalInterface
+	static interface C extends Supplier<Integer> {
+		@Symbolic("_")
+		@Override
+		Integer get();
+	}
 
 	public static void main(String[] args) {
+		new DynamicExpression().run();
+	}
+
+	void run() {
 		try {
-			B b = new B() {public Integer b() {return 2;}}; // Anonymous class
-			C c = () -> {return 1;}; // Lambda
+			// Anonymous class
+			Term _b = B._b.bind(
+				new B() {
+					public Integer b() {return 2;}
+				}
+			);
 
-			Symbol<?> $b = B.$b.bind(b);
-			Symbol<?> $c = C.$c.bind(c);
+			// Lambda
+			Term _c = C._get.bind(
+				(C) () -> 1
+			);
 
-			Symbol<?> $symbolicExpression = $add.apply($a, $sub.apply($b, $c));
-			Integer d = (Integer)$symbolicExpression.evaluate(new DynamicExpression());
+			Inner i = new Inner();
 
-			System.out.println($symbolicExpression + " evaluates to " + d);
+			BiFunction<Integer, Integer, Integer> add = i::add;
+			add = add.andThen(z->10*z);
+
+			Term _symExpr = DynExprAdd._apply.bind(add).build(
+				i._a.bind(i),
+				DynExprSub._sub.bind(DynExprSub.SUB).build(_b, _c)
+			);
+			Integer d = (Integer)_symExpr.evaluate();
+
+			System.out.println(_symExpr + " evaluates to " + d);
+
 		}
 		catch (Exception e) {e.printStackTrace();}
 	}
+}
+
+@FunctionalInterface
+interface DynExprAdd<I, J, R> extends BiFunction<I, J, R> {
+	@Symbolic(value="_", origin="java.util.function.BiFunction")
+	@Override
+	R apply(I i, J j);
+}
+
+enum DynExprSub {
+	SUB {Integer sub(Integer i, Integer j) { return i - j; }};
+
+	@Symbolic("_")
+	abstract Integer sub(Integer i, Integer j);
 }
