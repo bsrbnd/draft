@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Bernard Blaser
+ * Copyright 2015-2017 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,14 @@ import javax.lang.model.element.*;
 
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.code.*;
+import com.sun.tools.javac.code.Symbol.ClassSymbol;
 import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.*;
+import com.sun.tools.javac.jvm.ClassReader;
 
 /**
  * Annotations processor that provides symbolic access to class members.
@@ -37,42 +39,39 @@ import com.sun.tools.javac.util.*;
  * @author Bernard Blaser
  *
  */
-@SupportedAnnotationTypes("*")
+@SupportedAnnotationTypes("symprog.Symbolic")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class SymProc extends AbstractProcessor {
-	private Trees trees;
-	private TreeMaker nodes;
-	private Context context;
-	private Names names;
-	private Types types;
-	private Symtab symtab;
-	
 	@Override
-	public synchronized void init(ProcessingEnvironment pe) {
-		super.init(pe);
-		trees = Trees.instance(pe);
-		context = ((JavacProcessingEnvironment) pe).getContext();
-		nodes = TreeMaker.instance(context);
-		names = Names.instance(context);
-		types = Types.instance(context);
-		symtab = Symtab.instance(context);
-	}
-
-	@Override
-	public boolean process(Set<? extends TypeElement> annotations,
-			RoundEnvironment re) {
+	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment re) {
 		if (!re.processingOver()) {
+			SymbolGenerator gen = new SymbolGenerator(
+					((JavacProcessingEnvironment) processingEnv).getContext()
+			);
+
 			for (Element e: re.getRootElements()) {
-				if (e.getKind() == ElementKind.CLASS) {
-					JCTree tree = (JCTree) trees.getTree(e);
-					tree.accept(new Symbols());
-				}
+				JCTree tree = (JCTree) Trees.instance(processingEnv).getTree(e);
+				tree.accept(gen);
 			}
 		}
 		return true;
 	}
-	
-	private class Symbols extends TreeTranslator {
+
+	private static class SymbolGenerator extends TreeTranslator {
+		private TreeMaker nodes;
+		private Names names;
+		private Types types;
+		private Symtab symtab;
+		private ClassReader classes;
+
+		private SymbolGenerator(Context context) {
+			nodes = TreeMaker.instance(context);
+			names = Names.instance(context);
+			types = Types.instance(context);
+			symtab = Symtab.instance(context);
+			classes = ClassReader.instance(context);
+		}
+
 		@Override
 		public void visitClassDef(JCClassDecl tree) {
 			super.visitClassDef(tree);
@@ -85,8 +84,8 @@ public class SymProc extends AbstractProcessor {
 				generateSymbols(tree);
 			}
 		}
-		
-		private void generateSymbols(JCClassDecl clazz) {		
+
+		private void generateSymbols(JCClassDecl clazz) {
 			List<JCTree> newDefs = List.from(clazz.defs);
 			
 			for (JCTree decl: clazz.defs) {
@@ -103,12 +102,12 @@ public class SymProc extends AbstractProcessor {
 						List<String> paramsTypes = List.nil();
 					
 						for (VarSymbol param: met.sym.getParameters()) {
-							Type erasure = param.erasure(types);							
+							Type erasure = param.erasure(types);
 							paramsTypes = paramsTypes.append(translate(erasure));
 						}
 						
 						newDefs = newDefs.append(generateSymbol(
-								MethodSymbol.class.getSimpleName(), // TODO getName()
+								MethodSymbol.class.getName(),
 								symbolic,
 								clazz.sym.flatname.toString(),
 								name.toString(),
@@ -124,7 +123,7 @@ public class SymProc extends AbstractProcessor {
 						System.out.println("|-" + name + " -> " + symbolic.value()+name+symbolic.suffix());
 						
 						newDefs = newDefs.append(generateSymbol(
-								FieldSymbol.class.getSimpleName(), // TODO getName()
+								FieldSymbol.class.getName(),
 								symbolic,
 								clazz.sym.flatname.toString(),
 								name.toString(),
@@ -137,20 +136,26 @@ public class SymProc extends AbstractProcessor {
 		}
 
 		/**
-		 * Returns a <code>public static final</code> symbol field's declaration
-		 * representing a member.<br>
-		 * <b>DOESN'T WORK FOR NON-STATIC INNER CLASSES</b>
+		 * Generates a symbolic field declaration representing a member (field or method).<br>
 		 * 
-		 * @param symbolTypeName : symprog.FieldSymbol or symprog.MethodSymbol
-		 * @param symbolic : member (field or method) symbolic annotation
-		 * @param className : flat class name of the member (ex. mypackage.MyClass$MyInner)
+		 * @param symbolTypeName : generated symbolic field's flat type name
+		 * (<b><code>symprog.FieldSymbol</code></b> or <b><code>symprog.MethodSymbol</code></b>)
+		 * @param symbolic : member's symbolic annotation
+		 * @param className : member's flat class name
+		 * (ex. <b><code>mypackage.MyClass$MyInner</code></b>)
 		 * @param name : member's name
-		 * @param params :
-		 * method's parameters types (compatible with Class.forName()),
+		 * @param params : method's parameter types; compatible with <b><code>Class.forName()</code></b>,
 		 * <b><code>null</code></b> for fields
-		 * @return symbol's field declaration
+		 * 
+		 * @return symbolic field's declaration
 		 */
-		private JCVariableDecl generateSymbol(String symbolTypeName, Symbolic symbolic, String className, String name, List<String> params) {
+		private JCVariableDecl generateSymbol(
+				String symbolTypeName,
+				Symbolic symbolic,
+				String className,
+				String name,
+				List<String> params
+		) {
 			JCExpression[] symbolParams = new JCExpression[] {
 					nodes.Literal(className),
 					nodes.Literal(name)
@@ -167,11 +172,11 @@ public class SymProc extends AbstractProcessor {
 				paramslist = paramslist.append(nodes.NewArray(
 						nodes.Type(symtab.stringType),
 						List.nil(),
-						erasures));				
+						erasures));
 			}
 			
-			// TODO nodes.QualIdent() ?
-			JCIdent symbolType = nodes.Ident(names.fromString(symbolTypeName));
+			ClassSymbol cs = classes.loadClass(names.fromString(symbolTypeName));
+			JCExpression symbolType = nodes.QualIdent(cs);
 			
 			JCExpression newSymbol = nodes.NewClass(
 					null, null,
@@ -186,7 +191,7 @@ public class SymProc extends AbstractProcessor {
 					symbolType,
 					newSymbol);
 		}
-		
+
 		private String translate(Type type) {
 			String trim = "";
 			
@@ -206,7 +211,7 @@ public class SymProc extends AbstractProcessor {
 			
 			return trim;
 		}
-		
+
 		private String arrayName(String type) {
 			if (type.equals(boolean.class.getName().trim()))
 				return "Z";
@@ -225,6 +230,6 @@ public class SymProc extends AbstractProcessor {
 			else if (type.equals(short.class.getName().trim()))
 				return "S";
 			else return "L" + type + ";";
-		}		
+		}
 	}
 }
