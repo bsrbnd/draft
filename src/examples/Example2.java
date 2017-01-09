@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Bernard Blaser
+ * Copyright 2016-2017 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ public class Example2 {
 		private Integer id;
 
 		@Symbolic("_")
-		private Integer value;
+		private Integer val;
 
 		protected MyTable() {super();}
 	}
@@ -42,10 +42,10 @@ public class Example2 {
 			List<MyTable> rows = fetch(MyTable.class,
 				_AND.build(
 					_OR.build(
-						_EQ.build(MyTable._id.quote(), val(10)),
-						_EQ.build(MyTable._id.quote(), val(20))
+						_EQ.build(MyTable._id.quote(), value(10)),
+						_EQ.build(MyTable._id.quote(), value(20))
 					),
-					_EQ.build(MyTable._value.quote(), val(30))
+					_EQ.build(MyTable._val.quote(), value(30))
 				)
 			);
 		}
@@ -56,7 +56,7 @@ public class Example2 {
 
 	// Presistence layer.
 	static <R> List<R> fetch(Class<R> table, Term filter) throws Exception {
-		Term prefix = val("t");
+		Term prefix = value("t");
 
 		// Add prefix to filter tree (= query mutation).
 		class T {
@@ -80,12 +80,12 @@ public class Example2 {
 					MyTable._id.quote()
 				),
 				_ALIAS.build(
-					_DOT.build(prefix, MyTable._value.quote()),
-					MyTable._value.quote()
+					_DOT.build(prefix, MyTable._val.quote()),
+					MyTable._val.quote()
 				)
 			)),
 			_FROM.build(
-				_AS.build(val(table), prefix)
+				_AS.build(value(table), prefix)
 			),
 			_WHERE.build(filter)
 		);
@@ -162,6 +162,6 @@ public class Example2 {
 			return c.evaluate() + "=" + val;
 	}
 
-	static Value val(Object v) { return new Value(v); }
+	static Value value(Object v) { return new Value(v); }
 	static Value terms(Term... terms) { return new Value(terms); }
 }

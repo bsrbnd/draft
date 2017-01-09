@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Bernard Blaser
+ * Copyright 2015-2017 Bernard Blaser
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,36 +23,41 @@ abstract class Table<T extends Number> {
 	private T id;
 
 	@Symbolic
-	private void setId(T id) {setId(id, true);}
+	private void setId(T id) { setId(id, true); }
 
 	// User defined symbol's name to avoid conflit in symbolic overloaded methods.
 	@Symbolic(value="_", suffix="CheckNull")
 	private void setId(T id, boolean checkNull) {
-		if (checkNull && id == null) throw new NullPointerException($id + " can't be null in " + _setIdCheckNull + "()");
+		if (checkNull && id == null)
+			throw new NullPointerException($id + " can't be null in " + _setIdCheckNull + "()");
+
 		this.id = id;
 	}
 
-	public T getId() {return id;}
+	public T getId() { return id; }
 }
 
 public class Example {
 	private static class MyTable extends Table<Integer> {
-		public static final String NAME = MyTable.class.getSimpleName().toLowerCase();
+		public static final String NAME = MyTable.class.getSimpleName();
 
 		@Symbolic
-		private Integer value;
+		private Integer val;
 
-		public void setValue(Integer value) {this.value = value != null ? value : 0;}
-		public Integer getValue() {return value;}
+		public void setVal(Integer value) {
+			this.val = value != null ? value : 0;
+		}
+		public Integer getVal() { return val; }
 	}
 
 	public static void main(String[] args) {
 		final int ID = 1;
 
-		System.out.println("Request: " +
-			"SELECT " + MyTable.$id + ", " + MyTable.$value +
-			" FROM " + MyTable.NAME +
-			" WHERE " + MyTable.$id + "=" + ID);
+		System.out.println(
+				"Request:\n" +
+				"SELECT " + MyTable.$id + ", " + MyTable.$val + "\n" +
+				"  FROM " + MyTable.NAME + "\n" +
+				" WHERE " + MyTable.$id + "=" + ID);
 
 		try {
 			MyTable row = new MyTable();
@@ -61,11 +66,11 @@ public class Example {
 			Method m = row.$setId.reflect();
 			m.setAccessible(true);
 			m.invoke(row, ID);
-			row.setValue(4);
+			row.setVal(4);
 
 			System.out.println("Result: " +
 				MyTable.$id + "=" + row.getId() + ", " +
-				MyTable.$value + "=" + row.getValue());
+				MyTable.$val + "=" + row.getVal());
 
 			// NullPointerException
 			m = row._setIdCheckNull.reflect();
